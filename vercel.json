@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": null,
-  "installCommand": null,
+  "installCommand": "",
+  "buildCommand": "rm -rf dist && mkdir dist && cp -r index.html assets dist/",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/assets/(.*)",
