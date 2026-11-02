@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bảng điều khiển · Hang MU</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap">
+<style>
+/* Layout: three columns of cards (connection · interaction · sound/scene) over a status bar; collapses to one column on narrow windows.
+   Theme "Quỷ đỏ": light page, white cards, MU red primary, gold accents and numbers. */
+:root{
+  --bg:#f5f0e6; --card:#ffffff; --card2:#f7f3ea; --fg:#3b2f25; --muted:#7c6a58; --line:#e3d9c8;
+  --gold:#c98a1b; --mu:#c8102e; --mu2:#e0342a; --accent:#f2b705; --red:#a3162b; --green:#2f8f7a;
+  --display:"Noto Serif",Georgia,serif; --body:"Be Vietnam Pro",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#fffaf1,var(--bg) 320px);color:var(--fg);font:14px/1.45 var(--body);padding:18px max(16px,env(safe-area-inset-right)) 30px max(16px,env(safe-area-inset-left));min-height:100vh}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;margin-bottom:16px;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mu);border-radius:14px;box-shadow:0 4px 16px rgba(90,70,40,.08)}
+h1{font-family:var(--display);font-size:22px;margin:0;color:var(--mu)}
+h1::before{content:"⚽ ";color:var(--accent)}
+.status{display:flex;gap:10px;flex-wrap:wrap}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 12px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.chip.ok{background:#e6f5f0;border-color:#9fd3c3;color:#1f6e5c}.chip.bad{background:#fdecef;border-color:#f0b3bf;color:#a8344a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:10px;min-width:0;box-shadow:0 4px 18px rgba(90,70,40,.07)}
+.card h2{margin:0;font:600 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--mu);display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.hint{color:var(--muted);font-size:12px}
+.hint b{color:var(--mu)}
+label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;color:var(--fg);background:#fffdf9;border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-width:0;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--mu2);box-shadow:0 0 0 3px rgba(200,16,46,.15)}
+textarea{resize:vertical;min-height:60px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row>*{flex:1 1 0;min-width:0}
+.row.tight>*{flex:0 0 auto}
+button{font:600 13px var(--body);color:var(--fg);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+button:hover{border-color:var(--mu2);background:#fdeeee}
+button:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--mu);outline-offset:1px}
+button.primary{background:var(--mu);border-color:var(--mu);color:#fff}
+button.primary:hover{background:#a00d25}
+button.gold{background:linear-gradient(135deg,#f4c45a,var(--gold));border-color:var(--gold);color:#fff}
+button.gold:hover{background:linear-gradient(135deg,#f0bb47,#b67b14)}
+button.red{background:#fff;border-color:#f0b3bf;color:var(--red)}
+button.red:hover{background:#fdecef;border-color:var(--red)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--fg)}
+.check input{width:auto;accent-color:var(--mu)}
+#people{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fffdf9}
+#people table{width:100%;border-collapse:collapse;font-size:13px}
+#people tr:nth-child(even){background:#faf6ee}
+#people td{padding:6px 10px;border-bottom:1px solid #f0e8da}
+#people td:last-child{text-align:right;color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+#log{height:220px;overflow:auto;background:#fbf8f2;color:#4f4337;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bảng điều khiển · Hang MU</h1>
+  <div class="status">
+    <span class="chip" id="srv">Server: …</span>
+    <span class="chip" id="tt">TikTok: chưa kết nối</span>
+    <span class="chip" id="cnt">0 người</span>
+  </div>
+</header>
+
+<div class="grid">
+  <section class="card">
+    <h2>1 · Kết nối TikTok LIVE</h2>
+    <label for="uid">Username kênh đang live</label>
+    <div class="row"><input id="uid" placeholder="@tenkenhcuaban" autocomplete="off"><button class="primary" id="btnConnect">Kết nối</button><button id="btnDisconnect">Ngắt</button></div>
+    <p class="hint">Chỉ đọc sự kiện công khai của phòng live (bình luận, quà, tim). Không cần mật khẩu hay cookie TikTok. Phải bật LIVE trước rồi mới kết nối.</p>
+    <button class="gold" id="btnOverlay">Mở màn hình overlay 9:16</button>
+    <p class="hint">Trong TikTok LIVE Studio: Add source → Window capture → chọn cửa sổ overlay. Bấm "bật âm thanh" một lần trong cửa sổ đó.</p>
+    <h2>Trong Hang MU</h2>
+    <div id="people"><table><tbody id="peopleBody"><tr><td class="hint">Chưa có ai</td><td></td></tr></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Thử tương tác</h2>
+    <label for="simName">Tên người xem</label>
+    <input id="simName" value="Minh An">
+    <label for="simText">Bình luận / lời cổ vũ</label>
+    <input id="simText" value="Glory Glory Man United, cầu MU thắng trận tới">
+    <div class="row"><button id="btnChat">Gửi bình luận</button></div>
+    <div class="row">
+      <button data-gift="Hoa hồng" data-dia="1">Hoa hồng · 1</button>
+      <button data-gift="Khăn MU" data-dia="30">Khăn MU · 30</button>
+      <button data-gift="Cúp vàng" data-dia="199">Cúp vàng · 199</button>
+    </div>
+    <p class="hint">Gõ <b>nam · nữ · đội trưởng</b> làm bình luận để đổi hình, <b>đứng · ngồi · nằm · khóc · chửi</b> để đổi hành động.</p>
+    <h2>Đổ người mẫu</h2>
+    <div class="row"><button data-fill="15">15</button><button data-fill="36">36</button><button data-fill="64">64</button><button data-fill="100">100</button></div>
+    <button class="red" id="btnClear">Làm trống toàn bộ chỗ ngồi</button>
+    <h2>Bot tương tác mô phỏng</h2>
+    <div class="row">
+      <label>Số bot<input id="botN" type="number" min="1" max="100" value="12"></label>
+      <label>Nhịp<select id="botPace"><option value="slow">Chậm</option><option value="mid" selected>Vừa</option><option value="fast">Nhanh</option></select></label>
+      <button id="btnBots">Bật bot</button>
+    </div>
+    <p class="hint">Bot chỉ chạy trên màn hình của anh, không phải người xem TikTok thật.</p>
+  </section>
+
+  <section class="card">
+    <h2>3 · Giọng đọc · Nhạc · Kèn trống</h2>
+    <div class="row">
+      <label>Giọng<select id="voice"><option value="vi-VN-NamMinhNeural">Nam Minh (nam)</option><option value="vi-VN-HoaiMyNeural">Hoài My (nữ)</option></select></label>
+      <label>Độ trầm (Hz)<input id="pitch" type="number" step="1" value="-18"></label>
+      <label>Tốc độ (%)<input id="rate" type="number" step="1" value="-20"></label>
+    </div>
+    <label for="sayText">Đọc thử / phát thông báo</label>
+    <textarea id="sayText">Chào mừng anh em fan Quỷ đỏ đã vào Hang MU. Cùng nhau cổ vũ Manchester United. Glory Glory Man United!</textarea>
+    <div class="row"><button class="primary" id="btnSay">Phát lên live</button><button id="btnChant">Hô cổ vũ ngay</button></div>
+    <div class="row tight">
+      <label class="check"><input type="checkbox" id="music" checked> Nhạc nền</label>
+      <label class="check"><input type="checkbox" id="mo" checked> Tiếng trống nhịp</label>
+      <label class="check"><input type="checkbox" id="autoChant" checked> Hô cổ vũ tự động</label>
+    </div>
+    <div class="row">
+      <label>Nhịp trống (BPM)<input id="moBpm" type="number" min="20" max="120" value="52"></label>
+      <label>Hô cổ vũ mỗi (phút)<input id="chantEveryMin" type="number" min="1" max="60" value="3"></label>
+    </div>
+    <div class="row"><button id="btnBell">📯 Thổi kèn</button><button id="btnMo">Gõ trống</button></div>
+    <h2>Cảnh</h2>
+    <label>Tên hang<input id="title" value="Hang MU"></label>
+    <label>Dòng phụ<input id="subtitle" value="Off Fanclub Manchester United"></label>
+    <div class="row">
+      <label>Số chỗ ngồi<select id="seatMode"><option value="auto">Tự mở rộng 24 → 100</option><option value="24">24</option><option value="36">36</option><option value="64">64</option><option value="100">100</option></select></label>
+    </div>
+    <label class="check"><input type="checkbox" id="joinOnEnter"> Người vào phòng cũng được ngồi (không cần bình luận)</label>
+  </section>
+</div>
+
+<section class="card" style="margin-top:16px">
+  <h2>Nhật ký</h2>
+  <div id="log" aria-live="polite"></div>
+</section>
+<footer class="hint" style="margin-top:14px;text-align:center">Hang MU · Off Fanclub Manchester United · mã nguồn mở MIT · thực hiện bởi hoanganhcit</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ws = null;
+const send = (cmd, extra={}) => ws?.readyState===1 && ws.send(JSON.stringify({ t:'ctl', cmd, ...extra }));
+function logLine(s){ const el=$('log'); el.textContent += s + '\n'; el.scrollTop = el.scrollHeight; }
+const SETTING_IDS = ['voice','pitch','rate','music','mo','autoChant','moBpm','chantEveryMin','title','subtitle','seatMode','joinOnEnter'];
+function fillSettings(s){ for (const k of SETTING_IDS){ const el=$(k); if (!el || s[k]===undefined) continue; if (el.type==='checkbox') el.checked=!!s[k]; else el.value=s[k]; } }
+function readSettings(){ const o={}; for (const k of SETTING_IDS){ const el=$(k); o[k] = el.type==='checkbox' ? el.checked : el.type==='number' ? +el.value : el.value; } return o; }
+const people = new Map();
+function renderPeople(){
+  const tb=$('peopleBody'); tb.innerHTML='';
+  const list=[...people.values()].sort((a,b)=>b.coins-a.coins || a.name.localeCompare(b.name));
+  if (!list.length){ tb.innerHTML='<tr><td class="hint">Chưa có ai</td><td></td></tr>'; }
+  list.forEach((p,i)=>{ const tr=document.createElement('tr'); const a=document.createElement('td'); a.textContent=`${String(i+1).padStart(2,'0')}  ${p.name}`; const b=document.createElement('td'); b.textContent=p.coins? p.coins+' ✧':''; tr.append(a,b); tb.append(tr); });
+  $('cnt').textContent = `${people.size} người`;
+}
+function setTT(st){
+  const el=$('tt'); el.className='chip ' + (st.status==='connected'?'ok':st.status==='error'?'bad':'');
+  el.textContent = st.status==='connected' ? `TikTok: @${st.uniqueId} ✓` : st.status==='connecting' ? `TikTok: đang kết nối @${st.uniqueId}…` : st.status==='error' ? 'TikTok: lỗi kết nối' : 'TikTok: chưa kết nối';
+}
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws?role=control`);
+  ws.onopen = () => { $('srv').textContent='Server: đang chạy'; $('srv').className='chip ok'; };
+  ws.onclose = () => { $('srv').textContent='Server: mất kết nối'; $('srv').className='chip bad'; setTimeout(connect, 2000); };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t==='state'){ fillSettings(m.settings); setTT(m.tiktok); $('btnBots').textContent = m.bots ? 'Tắt bot' : 'Bật bot'; people.clear(); for (const v of m.viewers) people.set(v.id,v); renderPeople(); }
+    else if (m.t==='logs'){ $('log').textContent=''; m.lines.forEach(logLine); }
+    else if (m.t==='log') logLine(m.line);
+    else if (m.t==='tiktok') setTT(m);
+    else if (m.t==='join'){ people.set(m.v.id,m.v); renderPeople(); }
+    else if (m.t==='leave'){ people.delete(m.id); renderPeople(); }
+    else if (m.t==='gift'){ const p=people.get(m.id); if(p){ p.coins=m.total; renderPeople(); } }
+    else if (m.t==='settings') fillSettings(m.settings);        // keeps a second open panel in sync
+    else if (m.t==='bots') $('btnBots').textContent = m.on ? 'Tắt bot' : 'Bật bot';
+  };
+}
+connect();
+
+$('btnConnect').onclick = () => send('connect', { uniqueId: $('uid').value });
+$('uid').onkeydown = e => { if (e.key==='Enter') send('connect', { uniqueId: $('uid').value }); };
+$('btnDisconnect').onclick = () => send('disconnect');
+$('btnOverlay').onclick = () => window.open('/live/overlay.html', 'overlay916', 'width=540,height=960');
+$('btnChat').onclick = () => send('chat', { name: $('simName').value, text: $('simText').value });
+document.querySelectorAll('[data-gift]').forEach(b => b.onclick = () => send('gift', { name: $('simName').value, gift: b.dataset.gift, diamonds: +b.dataset.dia, count: 1 }));
+document.querySelectorAll('[data-fill]').forEach(b => b.onclick = () => send('fill', { n: +b.dataset.fill }));
+$('btnClear').onclick = () => send('clear');
+$('btnBots').onclick = () => send('bots', { on: $('btnBots').textContent.includes('Bật'), n: +$('botN').value, pace: $('botPace').value });
+$('btnSay').onclick = () => send('say', { text: $('sayText').value });
+$('btnChant').onclick = () => send('chant');
+$('btnBell').onclick = () => send('bell');
+$('btnMo').onclick = () => send('mo');
+for (const k of SETTING_IDS) $(k).addEventListener('change', () => send('settings', { settings: readSettings() }));
+</script>
+</body>
+</html>

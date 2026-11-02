@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Hang MU: nhập biệt danh fan, vào ngồi cổ vũ Manchester United cùng cả hội trong hang động Quỷ đỏ.">
+<meta name="theme-color" content="#3a0c0c">
+<meta property="og:title" content="Hang MU · Fanclub Manchester United">
+<meta property="og:image" content="/assets/hall.png">
+<title>Hang MU · Fanclub Manchester United</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Be+Vietnam+Pro:wght@400;500;600&display=swap">
+<style>
+/* Layout: one 9:16 stage (the painted hall) letterboxed in the viewport; sprites drawn on a canvas over it; HUD in the stage's corners.
+   Theme "Quỷ đỏ": dark red frosted panels, MU red accent, gold highlight for names and numbers. */
+:root{
+  --bg:#1a0606; --fg:#fff3e0; --muted:#d8b8a0; --gold:#f2c14e; --hi:#ffd34d; --red:#da291c; --red2:#ff4b3a;
+  --panel:rgba(30,8,8,.84); --panel2:rgba(60,12,12,.7); --line:rgba(242,193,78,.35);
+  --display:"Noto Serif",Georgia,"Times New Roman",serif;
+  --body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 0%,#4a0d0d,var(--bg) 60%,#0d0303);color:var(--fg);font-family:var(--body);overflow:hidden;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+#wrap{position:fixed;inset:0;display:grid;place-items:center;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+#stage{position:relative;aspect-ratio:9/16;height:100%;max-width:100%;max-height:100%;overflow:hidden;background:#1a0606;box-shadow:0 10px 50px rgba(90,70,40,.28),0 0 0 1px rgba(201,138,27,.25)}
+@media (max-aspect-ratio:9/16){#stage{width:100%;height:auto}}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+/* HUD lives inside the stage so it matches the 9:16 stream frame */
+.hud{position:absolute;z-index:5;pointer-events:none;display:flex;gap:8px;align-items:center}
+.hud *{pointer-events:auto}
+#top{top:10px;left:10px;right:10px;justify-content:space-between;flex-wrap:wrap}
+#bottom{bottom:10px;left:10px;right:10px;justify-content:space-between;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 11px;font-size:12px;backdrop-filter:blur(8px);display:inline-flex;gap:6px;align-items:center;min-width:0;box-shadow:0 2px 10px rgba(60,40,20,.12)}
+.chip b{font-family:var(--display);font-weight:600;color:var(--hi)}
+.n{font-variant-numeric:tabular-nums;font-weight:600;color:var(--gold)}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:12px;backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(60,40,20,.12);transition:transform .15s,border-color .15s,background .15s}
+.btn:hover{border-color:var(--hi);background:#3a0b0b;transform:translateY(-1px)}
+.btn:focus-visible,input:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
+.btn.primary{background:linear-gradient(135deg,var(--red2),#b3160c);border-color:var(--red);color:#fff;padding:11px 20px;font-size:15px;font-weight:600;box-shadow:0 6px 18px rgba(218,41,28,.45)}
+.btn.primary:hover{background:linear-gradient(135deg,#ff5f4f,#9e130a)}
+.btn.gift{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border-radius:14px;min-width:64px}
+.btn.gift small{color:var(--muted);font-size:10px;letter-spacing:.04em}
+.btn.gift b{font-family:var(--display);color:var(--hi);font-size:13px}
+#gifts{display:flex;gap:6px}
+/* top-fan board */
+#board{position:absolute;right:10px;top:52px;z-index:5;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--red);border-radius:12px;padding:8px 10px;min-width:150px;font-size:12px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(60,40,20,.15)}
+#board h3{margin:0 0 4px;font-family:var(--display);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--hi);font-weight:600}
+#board ol{margin:0;padding-left:18px;display:grid;gap:2px}
+#board li::marker{color:var(--hi);font-weight:600}
+#board li span{float:right;color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums;margin-left:8px}
+/* chat feed (left, like a live) */
+#feed{position:absolute;left:10px;bottom:74px;z-index:4;width:48%;max-width:230px;display:flex;flex-direction:column;gap:5px;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 25%);mask-image:linear-gradient(to bottom,transparent,#000 25%)}
+.msg{background:rgba(30,8,8,.82);color:var(--fg);border-left:3px solid var(--red);border-radius:4px 10px 10px 4px;padding:5px 9px;font-size:12px;line-height:1.35;max-width:100%;min-width:0;overflow-wrap:anywhere;animation:in .35s ease-out;box-shadow:0 2px 8px rgba(60,40,20,.12)}
+.msg b{color:var(--hi);font-weight:600}
+.msg.gift{background:rgba(110,18,12,.92);border-left-color:var(--hi)}
+.msg.gift b{color:var(--hi)}
+@keyframes in{from{opacity:0;transform:translateX(-8px)}}
+/* entry */
+#gate{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(60,10,10,.35),rgba(12,3,3,.78) 65%);padding:16px}
+#gate form{width:min(100%,360px);background:rgba(28,7,7,.92);border:1px solid rgba(242,193,78,.4);border-radius:20px;padding:26px 22px;backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:13px;box-shadow:0 24px 60px rgba(80,60,30,.25)}
+#gate h1{font-family:var(--display);font-weight:600;font-size:26px;margin:0;color:var(--hi);text-wrap:balance}
+#gate h1::before{content:"⚽ ";color:var(--hi)}
+#gate p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--hi);font-weight:600}
+input{font:inherit;font-size:16px;padding:11px 13px;border-radius:12px;border:1px solid rgba(242,193,78,.3);background:#2a0909;color:var(--fg);width:100%;box-sizing:border-box}
+input:focus{border-color:var(--hi)}
+input::placeholder{color:#9c7a6a}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hint{font-size:11px;color:var(--muted)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{background:#2a0909;border:1px solid rgba(242,193,78,.3);color:var(--fg);border-radius:999px;padding:5px 12px;font-size:12px;transition:background .15s}
+.seg button:hover{border-color:var(--red2)}
+.seg button[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+#toast{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:6;background:rgba(28,7,7,.94);border:1px solid var(--line);border-bottom:3px solid var(--red);border-radius:14px;padding:9px 16px;font-family:var(--display);color:var(--hi);font-size:14px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:88%;text-align:center;box-shadow:0 8px 24px rgba(60,40,20,.2)}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast,.msg{transition:none;animation:none}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*{box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div id="wrap"><div id="stage">
+  <canvas id="c"></canvas>
+  <div id="top" class="hud">
+    <span class="chip" id="me" hidden><b id="meName"></b><span class="hint">đang cổ vũ</span></span>
+    <span class="seg" id="poseBar" hidden>
+      <button type="button" data-pose="stand" aria-pressed="true">Đứng</button>
+      <button type="button" data-pose="sit" aria-pressed="false">Ngồi</button>
+      <button type="button" data-pose="lie" aria-pressed="false">Nằm</button>
+      <button type="button" data-pose="cry" aria-pressed="false">Khóc</button>
+      <button type="button" data-pose="shout" aria-pressed="false">Chửi lớn</button>
+    </span>
+    <span class="chip"><span class="n" id="count">0</span><span>fan Quỷ đỏ</span></span>
+  </div>
+  <div id="board" hidden><h3>Fan cứng</h3><ol id="boardList"></ol></div>
+  <div id="feed" aria-live="polite"></div>
+  <div id="bottom" class="hud">
+    <span id="gifts" hidden>
+      <button class="btn gift" data-coins="1" data-fx="cheer"><b>Cổ vũ</b><small>1 coin</small></button>
+      <button class="btn gift" data-coins="5" data-fx="flare"><b>Pháo sáng</b><small>5 coins</small></button>
+      <button class="btn gift" data-coins="20" data-fx="scarf"><b>Khăn MU</b><small>20 coins</small></button>
+      <button class="btn gift" data-coins="99" data-fx="trophy"><b>Cúp vàng</b><small>99 coins</small></button>
+    </span>
+    <span class="row">
+      <button class="btn" id="nextTrack" hidden title="Bài kế tiếp"><span id="nowPlaying">♪</span> ›</button>
+      <button class="btn" id="mute" hidden aria-pressed="false">Tắt nhạc</button>
+      <button class="btn" id="leave" hidden>Rời</button>
+    </span>
+  </div>
+  <div id="toast" role="status"></div>
+  <div id="gate">
+    <form id="gateForm">
+      <h1>Hang MU</h1>
+      <p>Off Fanclub Manchester United trong hang động Quỷ đỏ. Nhập biệt danh, chọn nhân vật và hành động (đứng, ngồi, nằm, khóc hay chửi lớn) rồi vào cổ vũ. Đây là bản thử giao diện 2.5D: nút quà ở dưới mô phỏng donation TikTok.</p>
+      <label for="nick">Biệt danh fan</label>
+      <input id="nick" name="nick" maxlength="20" autocomplete="nickname" placeholder="Ví dụ: Tuấn Quỷ Đỏ, Linh MU…" required>
+      <label>Nhân vật</label>
+      <div class="seg" id="skin">
+        <button type="button" data-skin="man" aria-pressed="true">Fan nam</button>
+        <button type="button" data-skin="woman" aria-pressed="false">Fan nữ</button>
+      </div>
+      <label>Hành động</label>
+      <div class="seg" id="pose">
+        <button type="button" data-pose="stand" aria-pressed="true">Đứng</button>
+        <button type="button" data-pose="sit" aria-pressed="false">Ngồi</button>
+        <button type="button" data-pose="lie" aria-pressed="false">Nằm</button>
+        <button type="button" data-pose="cry" aria-pressed="false">Khóc</button>
+        <button type="button" data-pose="shout" aria-pressed="false">Chửi lớn</button>
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">Vào Hang MU</button>
+        <span class="hint">Chạm vào hang để hô một câu cổ vũ.</span>
+      </div>
+      <div class="row">
+        <span class="hint">Thực hiện bởi hoanganhcit · mã nguồn mở</span>
+      </div>
+      <div class="row">
+        <span class="hint" id="voiceInfo">Đang tìm giọng đọc tiếng Việt…</span>
+      </div>
+    </form>
+  </div>
+</div></div>
+
+<script>
+/* ==========================================================
+   2.5D hall: painted 9:16 background (Flow) + sprites on canvas.
+   Stage space is 1080x1920; everything below is in that space.
+   ========================================================== */
+const SW = 1080, SH = 1920;
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const A = {};   // loaded images
+const ASSETS = {
+  hall:'assets/hall.png',
+  anim_man:'assets/anim_man.png', anim_woman:'assets/anim_woman.png',
+  halo:'assets/fx_halo.png',
+};
+/* ---- fan poses: assets/pose_<skin>_<pose>.png (back view, transparent, anchored at the feet).
+   A missing action falls back to the same fan's standing art, then to the walk strip, so art can be added one file at a time. ---- */
+const SKIN_LIST = ['man','woman'], POSES = ['stand','sit','lie','cry','shout'];
+// on-screen size at scale 1, whatever size the art was exported at: standing poses (incl. cry/shout) are ~1.5× a seated one; lying fans are capped by width
+const POSE_SIZE = { stand:{h:380}, sit:{h:250}, lie:{w:320}, cry:{h:380}, shout:{h:380} };
+const poseFit = (im, p) => POSE_SIZE[p].h ? POSE_SIZE[p].h/im.naturalHeight : POSE_SIZE[p].w/im.naturalWidth;
+for (const sk of SKIN_LIST) for (const p of POSES) ASSETS[`pose_${sk}_${p}`] = `assets/pose_${sk}_${p}.png`;
+let loaded = 0; const total = Object.keys(ASSETS).length;
+for (const [k,src] of Object.entries(ASSETS)) { const im = new Image(); im.onload = ()=>{ loaded++; }; im.onerror = ()=>{ loaded++; if (!k.startsWith('pose_')) console.warn('missing', src); }; im.src = src; A[k] = im; }
+// missing action art borrows the same fan's standing art before falling back to the old seated sprite
+for (const sk of SKIN_LIST) for (const p of POSES) A[`pose_${sk}_${p}`].pose = p;     // remember which pose the art shows, for sizing
+const poseImg = v => { for (const p of [v.pose, 'stand']){ const im = A[`pose_${v.skin}_${p}`]; if (im && im.naturalWidth) return im; } return null; };
+
+/* ---- walk / sit-down sprite strips (8 frames: 0-3 walk from behind, 4-7 an older sit-down, used only while pose art is missing) ----
+   seatH = height of the seated frame, used to size the strip like the other fans. */
+const ANIM = { man:{fw:212,fh:300,seatH:210}, woman:{fw:212,fh:300,seatH:220} };
+const hasAnim = k => ANIM[k] && A['anim_'+k] && A['anim_'+k].naturalWidth > 0;
+
+/* ---- floor layout: the carpet floor starts below the altar stairs at y≈1450 (back) and runs to y≈1850 (front).
+   We define our own seat grid in that trapezoid so sprites scale with depth. ---- */
+const FLOOR = { yTop: 1480, yBot: 1800, xHalfTop: 320, xHalfBot: 400 };   // half-width of the floor at top/bottom rows
+const ROWS = 6, COLS = 6, AISLE = 0.9;                                      // 36 seats, central aisle
+const seats = [];
+for (let r=0;r<ROWS;r++){
+  const t = (r+.55)/ROWS;                      // 0 back → 1 front
+  const y = FLOOR.yTop + (FLOOR.yBot-FLOOR.yTop)*t;
+  const half = FLOOR.xHalfTop + (FLOOR.xHalfBot-FLOOR.xHalfTop)*t;
+  const scale = .22 + .33*t;                   // sprite scale by depth
+  for (let c=0;c<COLS;c++){
+    let u = (c-(COLS-1)/2)/((COLS-1)/2);       // -1..1
+    u += Math.sign(u)*AISLE/ (COLS-1);         // open the aisle
+    seats.push({ x: SW/2 + u*half, y, scale, r, c, taken:null, order: r*COLS + c });
+  }
+}
+// fill from the front rows nearest the aisle first (so the stream always looks full near the camera)
+seats.sort((a,b)=> (b.r-a.r) || (Math.abs(a.x-SW/2)-Math.abs(b.x-SW/2)));
+const DOOR = { x: SW/2, y: SH + 120 };         // walk in from below the frame
+
+/* ---- visitors ---- */
+const visitors = [], fx = [], floaters = [];
+const SKINS = ['man','woman'];
+function freeSeat(){ return seats.find(s=>!s.taken) || null; }
+function addVisitor(name, skin, instant, isMe, pose){
+  const seat = freeSeat(); if(!seat) return null;
+  const v = { name, skin, pose: pose||'stand', seat, x: instant?seat.x:DOOR.x, y: instant?seat.y:DOOR.y, state: instant?'sit':'walk', t:0, frame: 7, ft:0, sitT:-1, flip:false, fade: instant?1:0, bob:0, bow:0, glow:0, coins:0, isMe:!!isMe, phase:Math.random()*6.28 };
+  seat.taken = v; visitors.push(v); updateCount(); return v;
+}
+function removeVisitor(v){ if(!v) return; v.seat.taken=null; visitors.splice(visitors.indexOf(v),1); updateCount(); }
+const countEl = document.getElementById('count');
+function updateCount(){ countEl.textContent = visitors.length; }
+
+// demo crowd so the hall never opens empty (replace with live viewers later)
+const DEMO = ['Tuấn Quỷ Đỏ','Linh MU','Hùng Old Trafford','Minh Red Devil','Hải MU','Ngọc Ánh','Quang Huy','Bảo Ngọc','Đức Anh','Mai Anh','Trung Kiên','Phương Thảo','Hoàng Nam','Thu Hà','Khánh Linh','Việt MU','Long Quỷ Đỏ','Thảo My','Gia Bảo','Anh Thư','Đăng Khoa','Hà Vy'];
+DEMO.forEach((n,i)=>{ const v = addVisitor(n, SKINS[i%SKINS.length], true, false, ['stand','sit','stand','lie','sit','shout','stand','cry'][Math.floor(i/2)%8]); v.coins = [120,80,55,30,20,12,8,5][i]||0; });
+
+/* ---- audio: music tracks + synthesized stadium horn and drum ---- */
+let AC=null, master=null, muted=false, drumTimer=null, hornTimer=null, me=null, haloPulse=0;
+/* Music: tracks played in order (a single track loops), crossfaded, ducked under TTS. Horn + drum stay synthesized. */
+const TRACKS = [
+  { src:'assets/music/glory.mp3', name:'Glory Glory Man United' },   // one track loops; add more entries to rotate
+];
+let musicGain=null, musicEls=[], trackIdx=0, duck=1;
+function audioStart(){
+  if (AC) return;
+  AC = new (window.AudioContext||window.webkitAudioContext)(); master = AC.createGain(); master.gain.value=muted?0:.8; master.connect(AC.destination);   // keep the mute button's state across leave/re-enter
+  musicGain = AC.createGain(); musicGain.gain.value=.55; musicGain.connect(master);
+  playTrack(Math.floor(Math.random()*TRACKS.length));
+  horn(); hornTimer=setInterval(horn, 45000); drumTimer=setInterval(drum, 1150);
+}
+function playTrack(i){
+  trackIdx = (i+TRACKS.length)%TRACKS.length; const tr = TRACKS[trackIdx];
+  const el = new Audio(tr.src); el.preload='auto'; el.crossOrigin='anonymous';
+  const src = AC.createMediaElementSource(el), g = AC.createGain(); g.gain.value=0; src.connect(g); g.connect(musicGain);
+  const now = AC.currentTime; g.gain.linearRampToValueAtTime(1, now+4);
+  for (const old of musicEls){ old.g.gain.cancelScheduledValues(now); old.g.gain.setValueAtTime(old.g.gain.value, now); old.g.gain.linearRampToValueAtTime(0, now+4); setTimeout(()=>{ try{old.el.pause();}catch(e){} }, 4200); }
+  musicEls = [{el,g}];
+  el.addEventListener('timeupdate', ()=>{ if (el.duration && el.duration-el.currentTime < 4 && !el._next){ el._next=true; playTrack(trackIdx+1); } });
+  el.addEventListener('error', ()=>{ if (TRACKS.length>1 && !el._next){ el._next=true; playTrack(trackIdx+1); } });
+  el.play().catch(()=>{});
+  const nt=document.getElementById('nowPlaying'); if (nt) nt.textContent = '♪ ' + tr.name;
+}
+function setDuck(on){ if(!musicGain||!AC) return; const t=AC.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setValueAtTime(musicGain.gain.value,t); musicGain.gain.linearRampToValueAtTime(on?.18:.55, t+.4); }
+function horn(big){
+  // stadium air horn: detuned saw waves through a lowpass; a big gift blows it three times
+  if(!AC||muted) return; const t0=AC.currentTime;
+  for (let n=0;n<(big?3:1);n++){ const t=t0+n*.32, d=big&&n===2?.9:.26;
+    const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800; const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.16,t+.02); g.gain.setValueAtTime(.16,t+d); g.gain.exponentialRampToValueAtTime(.0005,t+d+.15);
+    for (const f of [233,236,349]){ const o=AC.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.connect(lp); o.start(t); o.stop(t+d+.2); }
+    lp.connect(g); g.connect(master); }
+  haloPulse = 1;
+}
+function drum(){
+  if(!AC||muted||!me) return; const t=AC.currentTime;
+  // kick drum: a falling sine thump
+  const o=AC.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(48,t+.18);
+  const g=AC.createGain(); g.gain.setValueAtTime(.45,t); g.gain.exponentialRampToValueAtTime(.001,t+.3);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+.32);
+}
+// Pick a Vietnamese voice explicitly. Setting lang alone is not enough: with no vi voice installed the browser
+// falls back to its default (usually English) voice and reads Vietnamese text with English sounds.
+let viVoice = null, ttsWarned = false;
+function pickViVoice(){
+  try {
+    const vs = speechSynthesis.getVoices().filter(v => /^vi([-_]|$)/i.test(v.lang));
+    const rank = v => (/natural|online|neural/i.test(v.name)?4:0) + (/hoaimy|namminh/i.test(v.name)?2:0) + (/google/i.test(v.name)?1:0);
+    viVoice = vs.sort((a,b)=>rank(b)-rank(a))[0] || null;
+  } catch(e){ viVoice = null; }
+  const el = document.getElementById('voiceInfo');
+  if (el) el.textContent = viVoice ? 'Giọng đọc: ' + viVoice.name : 'Máy này chưa có giọng đọc tiếng Việt: lời cổ vũ chỉ hiện chữ.';
+}
+if ('speechSynthesis' in window){ pickViVoice(); speechSynthesis.addEventListener('voiceschanged', pickViVoice); }
+// Only speaks once the viewer is in the hall and not muted. The crowd's lines never cut off one already playing; the viewer's own always do.
+function ttsSpeak(text, mine){
+  try {
+    if(!('speechSynthesis' in window) || !me || muted) return;
+    if(!mine && speechSynthesis.speaking) return;
+    if(!viVoice){ pickViVoice(); }
+    if(!viVoice){ if(!ttsWarned){ ttsWarned=true; say('Hệ thống',' Máy này chưa có giọng tiếng Việt nên không đọc thành tiếng.'); } return; }
+    speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.voice=viVoice; u.lang=viVoice.lang; u.rate=.95; u.pitch=.95; u.onstart=()=>setDuck(true); u.onend=u.onerror=()=>setDuck(false); speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ---- feed, toast, top-fan board ---- */
+const feed=document.getElementById('feed'), toast=document.getElementById('toast');
+function say(name, text, gift){ const d=document.createElement('div'); d.className='msg'+(gift?' gift':''); d.innerHTML='<b></b> '; d.firstChild.textContent=name; d.append(text); feed.append(d); while(feed.children.length>7) feed.firstChild.remove(); }
+function showToast(t){ toast.textContent=t; toast.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove('show'),3800); }
+function renderBoard(){
+  const top=[...visitors].filter(v=>v.coins>0).sort((a,b)=>b.coins-a.coins).slice(0,3);
+  const ol=document.getElementById('boardList'); ol.innerHTML='';
+  for (const v of top){ const li=document.createElement('li'); li.textContent=v.name; const s=document.createElement('span'); s.textContent=v.coins; li.append(s); ol.append(li); }
+  document.getElementById('board').hidden = top.length===0;
+}
+renderBoard();
+
+/* ---- donation: what happens when someone gives ---- */
+const CHEERS = ['Glory Glory Man United!','United! United! United!','Quỷ đỏ vô địch!','Cầu cho MU thắng trận tới','Mãi theo Quỷ đỏ dù thắng hay thua','Hẹn gặp nhau ở Old Trafford'];
+function donate(v, coins, kind, text){
+  v.coins += coins; v.glow = 1; v.bow = 1;
+  const big = coins >= 99;
+  fx.push({ kind, x:v.seat.x, y:v.seat.y-120*v.seat.scale, t:0, life: big?3.2:2.2, scale: v.seat.scale*(big?1.6:1.1) });
+  // confetti drifts up from the seat; big gifts also shower the crest
+  for (let i=0;i<(big?18:coins>=20?8:3);i++) floaters.push({ x:v.seat.x+(Math.random()-.5)*160*v.seat.scale, y:v.seat.y-60, vx:(Math.random()-.5)*30, vy:-(60+Math.random()*80), t:0, life:2.5+Math.random(), s:.18+Math.random()*.15 });
+  if (big){ horn(true); for (let i=0;i<24;i++) floaters.push({ x:SW/2+(Math.random()-.5)*500, y:300+Math.random()*300, vx:(Math.random()-.5)*40, vy:20+Math.random()*40, t:0, life:4, s:.2+Math.random()*.15, down:true }); }
+  const label = {cheer:'Cổ vũ',flare:'Pháo sáng',scarf:'Khăn MU',trophy:'Cúp vàng'}[kind];
+  say(v.name, ` đã gửi ${label} ×${coins}` + (text?` · "${text}"`:''), true);
+  showToast(`${v.name} tặng ${label}` + (text?` — ${text}`:''));
+  ttsSpeak(`${v.name} tặng ${label}. ${text||''}`, v===me);
+  renderBoard();
+}
+
+/* ---- UI wiring ---- */
+let mySkin='man', myPose='stand';
+const POSE_NAME = { stand:'đứng cổ vũ', sit:'ngồi cổ vũ', lie:'nằm cổ vũ', cry:'khóc', shout:'chửi lớn' };
+function pick(seg, b){ for (const x of seg.children) x.setAttribute('aria-pressed', x===b); }
+document.getElementById('skin').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; mySkin=b.dataset.skin; pick(e.currentTarget, b); });
+// the same pose choice lives on the gate and in the HUD; keep both in sync
+function setPose(p){
+  myPose=p; for (const id of ['pose','poseBar']){ const seg=document.getElementById(id); pick(seg, seg.querySelector(`[data-pose="${p}"]`)); }
+  if (me){ me.pose=p; me.bow=1; me.glow=.6; showToast(`${me.name} đang ${POSE_NAME[p]}`); }
+}
+for (const id of ['pose','poseBar']) document.getElementById(id).addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setPose(b.dataset.pose); });
+const gate=document.getElementById('gate'), form=document.getElementById('gateForm'), input=document.getElementById('nick');
+try { const s=localStorage.getItem('bietdanh'); if(s) input.value=s; } catch(e){}
+form.addEventListener('submit', e=>{
+  e.preventDefault();
+  const name=input.value.trim().replace(/\s+/g,' ').slice(0,20); if(!name) return;
+  if(!freeSeat()){ showToast('Hang MU đã kín chỗ, xin chờ một lát.'); return; }
+  try{ localStorage.setItem('bietdanh',name); }catch(e){}
+  audioStart();
+  me = addVisitor(name, mySkin, false, true, myPose);
+  gate.hidden=true; document.getElementById('me').hidden=false; document.getElementById('meName').textContent=name;
+  for (const id of ['mute','leave','gifts','nextTrack','poseBar']) document.getElementById(id).hidden=false;
+  say(name,' đã vào Hang MU'); showToast('Chào mừng '+name+' vào Hang MU'); ttsSpeak('Chào mừng fan '+name+' vào Hang MU', true);
+});
+document.getElementById('gifts').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||!me) return; donate(me, +b.dataset.coins, b.dataset.fx, CHEERS[Math.floor(Math.random()*CHEERS.length)]); });
+document.getElementById('nextTrack').addEventListener('click', ()=>{ if(AC) playTrack(trackIdx+1); });
+document.getElementById('mute').addEventListener('click', e=>{ muted=!muted; if(master) master.gain.value=muted?0:.8; e.currentTarget.textContent=muted?'Bật nhạc':'Tắt nhạc'; e.currentTarget.setAttribute('aria-pressed',muted); });
+document.getElementById('leave').addEventListener('click', ()=>{ removeVisitor(me); me=null; gate.hidden=false; document.getElementById('me').hidden=true; for (const id of ['mute','leave','gifts','nextTrack','poseBar']) document.getElementById(id).hidden=true; for (const m of musicEls){ try{m.el.pause();}catch(e){} } musicEls=[]; if (AC){ AC.close(); AC=null; musicGain=null; } try{ speechSynthesis.cancel(); }catch(e){} clearInterval(drumTimer); clearInterval(hornTimer); renderBoard(); });
+canvas.addEventListener('pointerdown', ()=>{ if(!me||me.state!=='sit') return; const s=CHEERS[Math.floor(Math.random()*CHEERS.length)]; say(me.name,' '+s); me.bow=1; floaters.push({x:me.seat.x,y:me.seat.y-80,vx:0,vy:-70,t:0,life:2,s:.14}); });
+// demo activity: random comments and small gifts from the crowd
+setInterval(()=>{ if (visitors.length<2) return; const v=visitors[Math.floor(Math.random()*visitors.length)]; if (v===me) return;
+  if (Math.random()<.3) donate(v, [1,1,5,20][Math.floor(Math.random()*4)], ['cheer','cheer','flare','scarf'][Math.floor(Math.random()*4)], '');
+  else { say(v.name,' '+CHEERS[Math.floor(Math.random()*CHEERS.length)]); v.bow=1; }
+}, 4200);
+
+/* ---- render ---- */
+let last=performance.now();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function resize(){ const r=canvas.getBoundingClientRect(); const dpr=Math.min(devicePixelRatio,2); const w=Math.round(r.width*dpr), h=Math.round(r.height*dpr); if(canvas.width!==w||canvas.height!==h){ canvas.width=w; canvas.height=h; } ctx.setTransform(w/SW,0,0,h/SH,0,0); }
+function drawSprite(im, x, y, s, anchorY=1){ if(!im||!im.naturalWidth) return; const w=im.naturalWidth*s, h=im.naturalHeight*s; ctx.drawImage(im, x-w/2, y-h*anchorY, w, h); }
+function nameTag(text, x, y, s, isMe){
+  ctx.font = `600 ${Math.round(26*s+8)}px "Noto Serif", Georgia, serif`; const w=ctx.measureText(text).width+16, h=30*s+10;
+  ctx.fillStyle = isMe?'rgba(218,41,28,.95)':'rgba(30,8,8,.82)'; roundRect(x-w/2, y-h/2, w, h, h/2); ctx.fill();
+  ctx.strokeStyle = isMe?'rgba(255,255,255,.95)':'rgba(242,193,78,.45)'; ctx.lineWidth = isMe?2:1; ctx.stroke();
+  ctx.fillStyle = isMe?'#ffffff':'#fff3e0'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, x, y+1);
+}
+// gift icons are emoji and the falling bits are confetti, so effects match the MU theme without extra art
+const GIFT_ICON = { cheer:'📣', flare:'🎆', scarf:'🧣', trophy:'🏆' }, CONFETTI = ['#da291c','#ffd34d','#ffffff','#1a1a1a'];
+function giftIcon(kind, x, y, s){ ctx.font=`${Math.round(300*s)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(GIFT_ICON[kind]||'⚽', x, y); }
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function tick(now){
+  requestAnimationFrame(tick); resize();
+  const dt=Math.min((now-last)/1000,.05); last=now; const t=now/1000;
+  // background
+  ctx.clearRect(0,0,SW,SH);
+  if (A.hall.naturalWidth){ ctx.save(); ctx.filter='brightness(1.04) saturate(1.05)'; ctx.drawImage(A.hall,0,0,SW,SH); ctx.restore(); } else { ctx.fillStyle='#1a0606'; ctx.fillRect(0,0,SW,SH); }
+  // warm torchlight wash from the top
+  { const g=ctx.createLinearGradient(0,0,0,SH); g.addColorStop(0,'rgba(255,190,110,.12)'); g.addColorStop(.55,'rgba(255,190,110,.04)'); g.addColorStop(1,'rgba(255,190,110,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,SW,SH); }
+  // crest halo (additive glow over the painted MU crest, pulses on the bell)
+  haloPulse=Math.max(0,haloPulse-dt*.45);
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.22+.08*Math.sin(t*1.2)+haloPulse*.5;
+  drawSprite(A.halo, SW/2, 840, 2.1+haloPulse*.4, .5); ctx.restore();
+  // smoke from the altar flame
+  ctx.save(); ctx.globalAlpha=.35; ctx.fillStyle='#e8dcc6';
+  for (let i=0;i<14;i++){ const a=((t*.09+i*.071)%1); ctx.globalAlpha=.3*(1-a); ctx.beginPath(); ctx.arc(SW/2+Math.sin(a*7+i)*18*a, 1000-a*260, 4+a*14, 0, 6.28); ctx.fill(); }
+  ctx.restore();
+  // torch flicker overlay
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.06+.04*Math.sin(t*9)*Math.sin(t*13.3); ctx.fillStyle='#ffb347'; ctx.fillRect(0,300,SW,900); ctx.restore();
+  // visitors, back to front
+  const order=[...visitors].sort((a,b)=>a.y-b.y);
+  for (const v of order){
+    const anim = hasAnim(v.skin);
+    if (v.state==='walk'){
+      if (!anim){ v.x=v.seat.x; v.y=v.seat.y; v.state='sit'; }        // no strip for this skin yet: appear in place
+      else {
+        // walk up the aisle first, then step sideways into the row; speed in stage px/s scales with depth
+        const depth = (v.y-FLOOR.yTop)/(FLOOR.yBot-FLOOR.yTop), sp = (150+170*Math.max(0,Math.min(1.4,depth)))*dt;
+        const dx=v.seat.x-v.x, dy=v.seat.y-v.y;
+        if (Math.abs(dy)>3){ v.y += Math.max(-sp, Math.min(sp, dy)); v.x += (SW/2-v.x)*Math.min(1,dt*6); v.flip=false; }
+        else { v.x += Math.max(-sp, Math.min(sp, dx)); v.flip = dx<0; }
+        v.ft += dt; if (v.ft > .16){ v.ft = 0; v.frame = (v.frame+1)%4; }      // ~6 fps walk cycle
+        if (Math.abs(v.x-v.seat.x)<2 && Math.abs(v.y-v.seat.y)<3){
+          v.x=v.seat.x; v.y=v.seat.y; v.flip=false;
+          if (poseImg(v)){ v.state='sit'; v.bow=1; if (v.isMe) showToast('Đã vào chỗ. Glory Glory Man United!'); }   // pose art: take the pose right away
+          else { v.state='sitting'; v.sitT=0; }
+        }
+      }
+    } else if (v.state==='sitting'){
+      v.sitT += dt; v.frame = 4 + Math.min(3, Math.floor(v.sitT/.22));        // 4 frames ≈ 0.9 s to sit down
+      if (v.sitT > .9){ v.state='sit'; v.frame=7; if (v.isMe) showToast('Đã vào chỗ. Glory Glory Man United!'); }
+    }
+    v.fade = Math.min(1, v.fade + dt*2);
+    const sc = v.state==='walk' ? (.22+.33*((v.y-FLOOR.yTop)/(FLOOR.yBot-FLOOR.yTop))) : v.seat.scale;
+    const s = Math.max(.2, Math.min(.75, sc));
+    v.bow = Math.max(0, v.bow - dt*.7); v.glow = Math.max(0, v.glow - dt*.5);
+    const breathe = (reduce||v.state!=='sit')?0:Math.sin(t*1.1+v.phase)*2*s;
+    if (v.glow>0){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=v.glow*.7; const g=ctx.createRadialGradient(v.x,v.y-90*s,10,v.x,v.y-90*s,170*s); g.addColorStop(0,'rgba(255,200,110,.9)'); g.addColorStop(1,'rgba(255,160,60,0)'); ctx.fillStyle=g; ctx.fillRect(v.x-200*s,v.y-300*s,400*s,340*s); ctx.restore(); }
+    // gentle bob on gift/cheer: ease in-out, pivot at the feet, max ~4% squash
+    const bowK = v.state==='sit' ? Math.sin(Math.min(1,v.bow)*Math.PI)*.04 : 0;
+    ctx.save(); ctx.globalAlpha = v.fade; ctx.translate(v.x, v.y); if (bowK>0) ctx.transform(1,0,0,1-bowK,0,0);
+    let tagH; const pim = v.state==='sit' ? poseImg(v) : null;
+    if (pim){ const k = s*1.05*poseFit(pim, pim.pose); drawSprite(pim, 0, breathe, k, 1); tagH = pim.naturalHeight*k; }
+    else if (anim){
+      const a = ANIM[v.skin], k = s*1.05*260/a.seatH;                         // same on-screen size as the static seated art
+      if (v.flip) ctx.scale(-1,1);
+      ctx.drawImage(A['anim_'+v.skin], v.frame*a.fw, 0, a.fw, a.fh, -a.fw*k/2, -a.fh*k + breathe, a.fw*k, a.fh*k);
+      tagH = (v.state==='sit' ? a.seatH : a.fh*.97) * k;
+    } else tagH = 268*s;                                                       // art not loaded yet: name tag only
+    ctx.restore();
+    nameTag(v.name, v.x, v.y - tagH - 10*s, s, v.isMe);
+  }
+  // gift fx
+  for (let i=fx.length-1;i>=0;i--){ const f=fx[i]; f.t+=dt; const k=f.t/f.life; if(k>=1){ fx.splice(i,1); continue; }
+    const pop=Math.min(1,f.t*4); const ease=1-Math.pow(1-pop,3);
+    ctx.save(); ctx.globalAlpha = k<.75?1:(1-k)/.25; giftIcon(f.kind, f.x, f.y - k*160, f.scale*(.6+.4*ease)*.9); ctx.restore();
+    if (f.kind==='trophy' && f.t<.1) haloPulse=1;
+  }
+  // floating confetti
+  for (let i=floaters.length-1;i>=0;i--){ const p=floaters[i]; p.t+=dt; if(p.t>p.life){ floaters.splice(i,1); continue; }
+    p.x+=p.vx*dt+Math.sin(p.t*3+i)*20*dt; p.y+=p.vy*dt; ctx.save(); ctx.globalAlpha=Math.min(1,(p.life-p.t)); ctx.translate(p.x,p.y); ctx.rotate(Math.sin(p.t*2+i)*.6); ctx.fillStyle=p.c||(p.c=CONFETTI[Math.floor(Math.random()*CONFETTI.length)]); ctx.fillRect(-60*p.s,-30*p.s,120*p.s,60*p.s); ctx.restore(); }
+}
+/* credit plaque: every 5-10 minutes a small "Hang MU · hoanganhcit" plaque fades in for 7 s */
+(function(){
+  const TEXT = '✦ Hang MU · thực hiện bởi hoanganhcit ✦', gap = () => 3e5 + Math.random()*3e5;
+  let next = 0, shownAt = 0;
+  function draw(t){
+    if (!next) next = t + gap();
+    if (t > next){ shownAt = t; next = t + gap(); }
+    const e = (t - shownAt)/1e3; if (!shownAt || e > 7) return;
+    const c = document.querySelector('canvas').getContext('2d'), o = Math.max(0, Math.min(1, e*1.6, (7-e)*1.6));
+    c.save(); c.setTransform(c.canvas.width/1080, 0, 0, c.canvas.height/1920, 0, 0); c.globalAlpha = o; c.font = '600 30px "Noto Serif",Georgia,serif';
+    const w = c.measureText(TEXT).width + 60, x = 540 - w/2, y = 1060;
+    c.fillStyle = 'rgba(40,16,6,.88)'; c.beginPath(); c.roundRect ? c.roundRect(x, y, w, 54, 27) : c.rect(x, y, w, 54); c.fill();
+    c.lineWidth = 2; c.strokeStyle = 'rgba(226,176,79,.9)'; c.stroke(); c.fillStyle = '#ffd98a'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(TEXT, 540, y + 28); c.restore();
+  }
+  const orig = window.tick; window.tick = function(t){ orig(t); try { draw(t); } catch(e){} };
+})();
+requestAnimationFrame(tick);
+</script>
+
+</body>
+</html>

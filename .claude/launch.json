@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "live", "runtimeExecutable": "node", "runtimeArgs": ["live/server.mjs"], "port": 3000 },
+    { "name": "web", "runtimeExecutable": "node", "runtimeArgs": ["C:/Users/hoang/AppData/Local/Temp/claude/E--Projects-ClaudeAI-chanh-dien-online-main/53ebbd85-557a-4fce-9843-0995b037f1cc/scratchpad/static.mjs", "E:/Projects/ClaudeAI/chanh-dien-online-main"], "port": 5173 }
+  ]
+}
