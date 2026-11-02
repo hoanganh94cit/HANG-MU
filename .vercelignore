@@ -1,0 +1,9 @@
+# Vercel only hosts the static web version (index.html + assets/).
+# The live/ server runs on the streaming PC: it needs a long-running process, WebSockets and a writable disk,
+# which Vercel functions don't provide, so it must never be deployed there.
+live/
+.claude/
+_headers
+pose-prompts.md
+leader-prompts.md
+docs/
